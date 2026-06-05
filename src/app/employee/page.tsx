@@ -1,16 +1,20 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logout } from '@/app/auth/actions'
 import AttendanceScanner from '@/components/AttendanceScanner'
 
 export default async function EmployeePage() {
-  const supabase = await createClient()
+  const supabase      = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) redirect('/login')
 
-  const { data: profile } = await supabase
+  // Use admin client to bypass RLS for profile fetch
+  const adminClient = createAdminClient()
+  const { data: profile } = await adminClient
     .from('profiles').select('*').eq('id', user.id).single()
 
+  // Redirect admin to admin dashboard
   if (profile?.role === 'admin') redirect('/admin/dashboard')
 
   const today = new Date().toLocaleDateString('km-KH', {
@@ -19,7 +23,6 @@ export default async function EmployeePage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Nav */}
       <nav className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -28,7 +31,7 @@ export default async function EmployeePage() {
             </span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-800">{profile?.name}</p>
+            <p className="text-sm font-semibold text-gray-800">{profile?.name ?? user.email}</p>
             <p className="text-xs text-gray-400">បុគ្គលិក</p>
           </div>
         </div>
@@ -49,7 +52,6 @@ export default async function EmployeePage() {
           <h1 className="text-xl font-bold text-gray-900">ចុះវត្តមាន</h1>
           <p className="text-sm text-gray-400 mt-0.5">{today}</p>
         </div>
-
         <AttendanceScanner
           employeeId={user.id}
           employeeName={profile?.name ?? 'បុគ្គលិក'}

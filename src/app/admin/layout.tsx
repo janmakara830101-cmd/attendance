@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logout } from '@/app/auth/actions'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +8,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) redirect('/login')
 
-  const { data: profile } = await supabase
+  // Use admin client to bypass RLS for role check
+  const adminClient = createAdminClient()
+  const { data: profile } = await adminClient
     .from('profiles').select('name, role').eq('id', user.id).single()
 
   if (profile?.role !== 'admin') redirect('/employee')
