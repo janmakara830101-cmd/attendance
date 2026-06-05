@@ -4,24 +4,21 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-/**
- * Remove BOM, Zero-Width chars, and any non-ASCII from email/password
- * Fixes: "Cannot convert argument to a ByteString" error
- */
+/** Remove BOM, Zero-Width chars, and all non-ASCII using Unicode escapes */
 function sanitize(value: unknown): string {
   if (typeof value !== 'string') return ''
   return value
-    .replace(/[﻿​‌‍­  ]/g, '') // BOM + invisible chars
-    .replace(/[^\x00-\x7F]/g, '')  // remove any non-ASCII (> 127)
+    .replace(/﻿/g, '')    // BOM
+    .replace(/​/g, '')    // Zero Width Space
+    .replace(/‌/g, '')    // Zero Width Non-Joiner
+    .replace(/‍/g, '')    // Zero Width Joiner
+    .replace(/­/g, '')    // Soft Hyphen
+    .replace(/[^\x00-\x7F]/g, '') // Any remaining non-ASCII
     .trim()
 }
 
 function sanitizeEmail(value: unknown): string {
-  if (typeof value !== 'string') return ''
-  return value
-    .replace(/[﻿​‌‍­]/g, '')
-    .trim()
-    .toLowerCase()
+  return sanitize(value).toLowerCase()
 }
 
 // ── Login ────────────────────────────────────────────────────
@@ -38,13 +35,12 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    // Show friendly Khmer message instead of raw Supabase error
     const msg =
       error.message.includes('Invalid login') || error.message.includes('invalid_credentials')
-        ? 'Email ឬ ពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
+        ? 'Email ​ឬ​ ​ពាក្យសម្ងាត់​មិនត្រឹមត្រូវ'
         : error.message.includes('Email not confirmed')
-        ? 'សូម Confirm Email ជាមុនសិន (ពិនិត្យ Inbox)'
-        : 'Login បរាជ័យ — សូមព្យាយាមម្ដងទៀត'
+        ? '​សូម Confirm Email ​ជាមុនសិន ​(ពិនិត្យ Inbox)'
+        : 'Login ​បរាជ័យ — ​សូមព្យាយាមម្ដងទៀត'
     redirect('/login?error=' + encodeURIComponent(msg))
   }
 
@@ -61,10 +57,10 @@ export async function register(formData: FormData) {
   const password = sanitize(formData.get('password'))
 
   if (!email || !password) {
-    redirect('/register?error=' + encodeURIComponent('សូមបំពេញ Email និងពាក្យសម្ងាត់'))
+    redirect('/register?error=' + encodeURIComponent('Missing email or password'))
   }
   if (password.length < 6) {
-    redirect('/register?error=' + encodeURIComponent('ពាក្យសម្ងាត់ត្រូវការ ≥ 6 តួអក្សរ ASCII'))
+    redirect('/register?error=' + encodeURIComponent('Password must be at least 6 characters'))
   }
 
   const { error } = await supabase.auth.signUp({
@@ -74,10 +70,9 @@ export async function register(formData: FormData) {
   })
 
   if (error) {
-    const msg =
-      error.message.includes('already registered')
-        ? 'Email នេះបានចុះឈ្មោះហើយ'
-        : 'ចុះឈ្មោះបរាជ័យ — សូមព្យាយាមម្ដងទៀត'
+    const msg = error.message.includes('already registered')
+      ? 'Email already registered'
+      : 'Registration failed — please try again'
     redirect('/register?error=' + encodeURIComponent(msg))
   }
 
