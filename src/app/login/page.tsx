@@ -50,8 +50,12 @@ export default function LoginPage({
               required
               autoComplete="current-password"
               placeholder="••••••••"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
             />
+            <p className="text-xs text-gray-400 mt-1">⚠️ ពាក្យសម្ងាត់ត្រូវប្រើ អក្សរអង់គ្លេស/លេខ តែប៉ុណ្ណោះ</p>
           </div>
 
           <button
