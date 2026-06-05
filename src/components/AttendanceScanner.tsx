@@ -40,8 +40,13 @@ export default function AttendanceScanner({ employeeId, employeeName }: Props) {
   // Update distance when coords or settings change
   useEffect(() => {
     if (coords && settings) {
-      const d = haversine(coords.lat, coords.lng, settings.office_lat, settings.office_lng)
-      setDistance(Math.round(d))
+      // Convert to Number to fix NaN from API string values
+      const officeLat = Number(settings.office_lat)
+      const officeLng = Number(settings.office_lng)
+      if (!isNaN(officeLat) && !isNaN(officeLng)) {
+        const d = haversine(coords.lat, coords.lng, officeLat, officeLng)
+        setDistance(Math.round(d))
+      }
     }
   }, [coords, settings])
 
